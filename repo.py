@@ -1,9 +1,16 @@
+import os
 from pymongo import MongoClient
 
 class IoTRepository:
     def __init__(self):
-        # HUSK AT SÆTTE DIN EGEN CONNECTION STRING IND HER!
-        self.client = MongoClient("mongodb+srv://lula0002:Niptyalalyel2026%21@lula0002.zhc8sou.mongodb.net/?appName=lula0002")
+        # Vi henter nøglen fra en hemmelig miljøvariabel i stedet for at skrive den direkte i koden
+        mongo_uri = os.environ.get("MONGO_URI")
+        
+        # Hvis vi tester lokalt og glemmer at sætte variablen, giver vi en pæn fejlbesked
+        if not mongo_uri:
+            raise ValueError("Fejl: MONGO_URI miljøvariablen mangler!")
+            
+        self.client = MongoClient(mongo_uri)
         self.db = self.client.iot_db
         self.sensors = self.db.sensors
         self.readings = self.db.readings
@@ -21,7 +28,7 @@ class IoTRepository:
 
     # --- READING METODER ---
     def create_reading(self, reading_data):
-        result = self.readings.insert_one(reading_data)
+        result = self.readings.insert_one(reading_data) 
         return str(result.inserted_id)
 
     def get_all_readings(self):

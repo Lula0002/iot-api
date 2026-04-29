@@ -69,14 +69,17 @@ def create_sensor():
         "status": "active" # Vi siger automatisk, at den er aktiv fra start
     }
     
-    # 4. Læg mappen ned i pengeskabet (MongoDB)
-    sensor_id = repo.create_sensor(ny_sensor)
-    
-    # 5. Fortæl teknikeren, at det gik godt (og giv ham det ID, pengeskabet fandt på)
-    return jsonify({
-        "message": "Sensor oprettet!", 
-        "sensor_id": sensor_id
-    }), 201
+    try:
+        # 4. Læg mappen ned i pengeskabet (MongoDB)
+        sensor_id = repo.create_sensor(ny_sensor)
+        
+        # 5. Fortæl teknikeren, at det gik godt (og giv ham det ID, pengeskabet fandt på)
+        return jsonify({
+            "message": "Sensor oprettet!", 
+            "sensor_id": sensor_id
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- DØR 2: Hent alle sensorer ---
 @app.route('/sensors', methods=['GET'])
@@ -90,11 +93,14 @@ def get_sensors():
       200:
         description: En liste af sensorer
     """
-    # 1. Bed tjeneren om at hente alt indholdet fra skuffen 'sensors_collection'
-    alle_sensorer = repo.get_all_sensors()
-        
-    # 3. Send listen tilbage til brugeren
-    return jsonify(alle_sensorer), 200
+    try:
+        # 1. Bed tjeneren om at hente alt indholdet fra skuffen 'sensors_collection'
+        alle_sensorer = repo.get_all_sensors()
+            
+        # 3. Send listen tilbage til brugeren
+        return jsonify(alle_sensorer), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- DØR 3: Modtag en ny måling fra en sensor ---
 @app.route('/readings', methods=['POST'])
@@ -142,12 +148,15 @@ def create_reading():
         "timestamp": datetime.datetime.now().isoformat() # Vi stempler automatisk, hvornår målingen kom ind
     }
     
-    reading_id = repo.create_reading(ny_maaling)
-    
-    return jsonify({
-        "message": "Måling gemt!", 
-        "reading_id": reading_id
-    }), 201
+    try:
+        reading_id = repo.create_reading(ny_maaling)
+        
+        return jsonify({
+            "message": "Måling gemt!", 
+            "reading_id": reading_id
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- DØR 4: Hent alle målinger ---
 @app.route('/readings', methods=['GET'])
@@ -161,9 +170,12 @@ def get_readings():
       200:
         description: En liste af målinger
     """
-    alle_maalinger = repo.get_all_readings()
-        
-    return jsonify(alle_maalinger), 200
+    try:
+        alle_maalinger = repo.get_all_readings()
+            
+        return jsonify(alle_maalinger), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

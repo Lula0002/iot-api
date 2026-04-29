@@ -1,25 +1,13 @@
 from flask import Flask, jsonify, request
 from flasgger import Swagger
-from pymongo import MongoClient
+from repo import IoTRepository
 
 # 1. Start restauranten (Flask)
 app = Flask(__name__)
 swagger = Swagger(app)
 
-# 2. Forbind til pengeskabet (MongoDB)
-# HUSK AT SÆTTE DIN EGEN CONNECTION STRING IND HERUNDER!
-MONGO_URI = "mongodb+srv://lula0002:Niptyalalyel2026!@lula0002.zhc8sou.mongodb.net/?appName=lula0002"
-
-
-# Vi beder tolken (MongoClient) om at låse pengeskabet op
-client = MongoClient(MONGO_URI)
-
-# Vi vælger den specifikke skuffe i pengeskabet, vi vil bruge (vi kalder den 'iot_db')
-db = client.iot_db
-
-# Vi laver to mapper nede i skuffen: én til sensorer og én til målinger
-sensors_collection = db.sensors
-readings_collection = db.readings
+# 2. Hent kokken (Repository)
+repo = IoTRepository()
 
 # En lille test-dør for at se, om restauranten er åben
 @app.route('/', methods=['GET'])
@@ -82,12 +70,12 @@ def create_sensor():
     }
     
     # 4. Læg mappen ned i pengeskabet (MongoDB)
-    resultat = sensors_collection.insert_one(ny_sensor)
+    sensor_id = repo.create_sensor(ny_sensor)
     
     # 5. Fortæl teknikeren, at det gik godt (og giv ham det ID, pengeskabet fandt på)
     return jsonify({
         "message": "Sensor oprettet!", 
-        "sensor_id": str(resultat.inserted_id)
+        "sensor_id": sensor_id
     }), 201
 
 # --- DØR 2: Hent alle sensorer ---
@@ -103,11 +91,7 @@ def get_sensors():
         description: En liste af sensorer
     """
     # 1. Bed tjeneren om at hente alt indholdet fra skuffen 'sensors_collection'
-    alle_sensorer = list(sensors_collection.find())
-    
-    # 2. MongoDB's unikke ID'er er lidt specielle, så vi skal lige oversætte dem til almindelig tekst
-    for sensor in alle_sensorer:
-        sensor['_id'] = str(sensor['_id'])
+    alle_sensorer = repo.get_all_sensors()
         
     # 3. Send listen tilbage til brugeren
     return jsonify(alle_sensorer), 200
@@ -158,11 +142,11 @@ def create_reading():
         "timestamp": datetime.datetime.now().isoformat() # Vi stempler automatisk, hvornår målingen kom ind
     }
     
-    resultat = readings_collection.insert_one(ny_maaling)
+    reading_id = repo.create_reading(ny_maaling)
     
     return jsonify({
         "message": "Måling gemt!", 
-        "reading_id": str(resultat.inserted_id)
+        "reading_id": reading_id
     }), 201
 
 # --- DØR 4: Hent alle målinger ---
@@ -177,10 +161,7 @@ def get_readings():
       200:
         description: En liste af målinger
     """
-    alle_maalinger = list(readings_collection.find())
-    
-    for maaling in alle_maalinger:
-        maaling['_id'] = str(maaling['_id'])
+    alle_maalinger = repo.get_all_readings()
         
     return jsonify(alle_maalinger), 200
 

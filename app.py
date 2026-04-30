@@ -1,5 +1,6 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file, render_template
 from flasgger import Swagger
+from pymongo.errors import DuplicateKeyError
 from repo import IoTRepository
 
 # 1. Start restauranten (Flask)
@@ -9,17 +10,18 @@ swagger = Swagger(app)
 # 2. Hent kokken (Repository)
 repo = IoTRepository()
 
-# En lille test-dør for at se, om restauranten er åben
+# Hoveddøren: Viser vores Frontend (index.html)
 @app.route('/', methods=['GET'])
 def home():
     """
-    Velkomst-dør
+    Viser hjemmesiden (Frontend)
     ---
     responses:
       200:
-        description: En velkomstbesked
+        description: Hjemmesiden vises
     """
-    return jsonify({"message": "Velkommen til Intelligent IoT Solutions API!"})
+    # Vi bruger send_file, fordi index.html ligger i samme mappe som app.py
+    return send_file('index.html')
 
 
 # --- DØR 1: Opret en ny sensor ---
@@ -37,10 +39,14 @@ def create_sensor():
         schema:
           type: object
           required:
+            - sensor_id  # NYT: Påkrævet sensor_id
             - name
             - location
             - type
           properties:
+            sensor_id:
+              type: string
+              example: "sensor_001"  # NYT: Brugerdefineret ID
             name:
               type: string
               example: "Termometer Hal A"
@@ -57,12 +63,13 @@ def create_sensor():
     # 1. Læs den seddel (JSON), som teknikeren har sendt med
     data = request.json
     
-    # 2. Tjek om han har husket at skrive navn, placering og type
-    if not data or 'name' not in data or 'location' not in data or 'type' not in data:
-        return jsonify({"error": "Du mangler at udfylde name, location eller type!"}), 400
+    # 2. Tjek om han har husket at skrive sensor_id, navn, placering og type
+    if not data or 'sensor_id' not in data or 'name' not in data or 'location' not in data or 'type' not in data:
+        return jsonify({"error": "Du mangler at udfylde sensor_id, name, location eller type!"}), 400
     
-    # 3. Lav en ny mappe til sensoren
+    # 3. Lav en ny mappe til sensoren (inkl. sensor_id)
     ny_sensor = {
+        "sensor_id": data['sensor_id'],  # NYT: Gem det brugerdefinerede ID
         "name": data['name'],
         "location": data['location'],
         "type": data['type'],
@@ -71,13 +78,19 @@ def create_sensor():
     
     try:
         # 4. Læg mappen ned i pengeskabet (MongoDB)
-        sensor_id = repo.create_sensor(ny_sensor)
+        created_sensor_id = repo.create_sensor(ny_sensor)
         
-        # 5. Fortæl teknikeren, at det gik godt (og giv ham det ID, pengeskabet fandt på)
+        # 5. Fortæl teknikeren, at det gik godt (og giv ham det ID, vi selv har valgt)
         return jsonify({
             "message": "Sensor oprettet!", 
-            "sensor_id": sensor_id
+            "sensor_id": created_sensor_id
         }), 201
+    except DuplicateKeyError:
+        # Hvis sensoren allerede findes (samme ID), giver vi bare besked om at den findes
+        return jsonify({
+            "message": "Sensoren findes allerede, fortsætter med måling...", 
+            "sensor_id": ny_sensor['sensor_id']
+        }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -91,13 +104,13 @@ def get_sensors():
       - Sensors
     responses:
       200:
-        description: En liste af sensorer
+        description: En liste af sensorer (brug sensor_id som ID)
     """
     try:
         # 1. Bed tjeneren om at hente alt indholdet fra skuffen 'sensors_collection'
         alle_sensorer = repo.get_all_sensors()
             
-        # 3. Send listen tilbage til brugeren
+        # 2. Send listen tilbage til brugeren
         return jsonify(alle_sensorer), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -159,7 +172,7 @@ def create_reading():
             if data['value'] > 50 or data['value'] < -20:
                 # Opret Alert objektet
                 alert_data = {
-                    "sensorId": data['sensor_id'],
+                    "sensor_id": data['sensor_id'], # <-- RETTET: Fra sensorId til sensor_id for konsistens
                     "readingId": reading_id,
                     "value": data['value'],  # <-- TILFØJET: Vi skal huske at gemme værdien her!
                     "type": "threshold_breach",
@@ -203,12 +216,22 @@ def get_readings():
     ---
     tags:
       - Readings
+    parameters:
+      - name: sensor_id
+        in: query
+        type: string
+        required: false
+        description: "Filtrer målinger efter sensor ID (f.eks. sensor_001)"
     responses:
       200:
         description: En liste af målinger
     """
     try:
-        alle_maalinger = repo.get_all_readings()
+        # ELI5: request.args.get lytter efter ?sensor_id=... i URL'en
+        sensor_id = request.args.get('sensor_id')
+        
+        # Vi sender sensor_id videre til repo. Hvis det er None, henter den alle.
+        alle_maalinger = repo.get_all_readings(sensor_id=sensor_id)
             
         return jsonify(alle_maalinger), 200
     except Exception as e:
@@ -222,12 +245,22 @@ def get_alerts():
     ---
     tags:
       - Alerts
+    parameters:
+      - name: sensor_id
+        in: query
+        type: string
+        required: false
+        description: "Filtrer alarmer efter sensor ID (f.eks. sensor_001)"
     responses:
       200:
         description: En liste af alarmer
     """
     try:
-        alle_alarmer = repo.get_all_alerts()
+        # ELI5: request.args.get lytter efter ?sensor_id=... i URL'en
+        sensor_id = request.args.get('sensor_id')
+        
+        # Vi sender sensor_id videre til repo. Hvis det er None, henter den alle.
+        alle_alarmer = repo.get_all_alerts(sensor_id=sensor_id)
         return jsonify(alle_alarmer), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

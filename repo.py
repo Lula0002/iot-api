@@ -24,13 +24,17 @@ class IoTRepository:
 
     # --- SENSOR METODER ---
     def create_sensor(self, sensor_data):
+        # NYT: Brug sensor_id som det primære ID (_id) i MongoDB
+        # Dette sikrer at vi har ét konsistent ID på tværs af hele systemet
+        sensor_data['_id'] = sensor_data['sensor_id']
         result = self.sensors.insert_one(sensor_data)
-        return str(result.inserted_id)
+        return sensor_data['sensor_id']  # Returner det brugerdefinerede ID
 
     def get_all_sensors(self):
         sensors = list(self.sensors.find())
         for sensor in sensors:
-            sensor['_id'] = str(sensor['_id'])
+            # NYT: Brug sensor_id som det primære ID for konsistens
+            sensor['_id'] = sensor.get('sensor_id', str(sensor['_id']))
         return sensors
 
     # --- READING METODER ---
@@ -38,8 +42,11 @@ class IoTRepository:
         result = self.readings.insert_one(reading_data) 
         return str(result.inserted_id)
 
-    def get_all_readings(self):
-        readings = list(self.readings.find())
+    def get_all_readings(self, sensor_id=None):
+        query = {}
+        if sensor_id:
+            query["sensor_id"] = sensor_id
+        readings = list(self.readings.find(query))
         for reading in readings:
             reading['_id'] = str(reading['_id'])
         return readings
@@ -49,8 +56,11 @@ class IoTRepository:
         result = self.alerts.insert_one(alert_data)
         return str(result.inserted_id)
 
-    def get_all_alerts(self):
-        alerts = list(self.alerts.find())
+    def get_all_alerts(self, sensor_id=None):
+        query = {}
+        if sensor_id:
+            query["sensor_id"] = sensor_id
+        alerts = list(self.alerts.find(query))
         for alert in alerts:
             alert['_id'] = str(alert['_id'])
         return alerts

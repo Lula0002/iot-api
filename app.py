@@ -214,6 +214,189 @@ def get_readings():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# --- DØR 5: Hent alle alarmer ---
+@app.route('/alerts', methods=['GET'])
+def get_alerts():
+    """
+    Hent en liste over alle alarmer
+    ---
+    tags:
+      - Alerts
+    responses:
+      200:
+        description: En liste af alarmer
+    """
+    try:
+        alle_alarmer = repo.get_all_alerts()
+        return jsonify(alle_alarmer), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- DØR 5: Slet en sensor ---
+@app.route('/sensors/<sensor_id>', methods=['DELETE'])
+def delete_sensor(sensor_id):
+    """
+    Slet en sensor
+    ---
+    tags:
+      - Sensors
+    parameters:
+      - name: sensor_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Sensor slettet
+      404:
+        description: Sensor ikke fundet
+    """
+    try:
+        deleted_count = repo.delete_sensor(sensor_id)
+        if deleted_count == 0:
+            return jsonify({"error": "Sensor ikke fundet"}), 404
+        return jsonify({"message": "Sensor slettet!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- DØR 6: Slet en måling ---
+@app.route('/readings/<reading_id>', methods=['DELETE'])
+def delete_reading(reading_id):
+    """
+    Slet en måling
+    ---
+    tags:
+      - Readings
+    parameters:
+      - name: reading_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Måling slettet
+      404:
+        description: Måling ikke fundet
+    """
+    try:
+        deleted_count = repo.delete_reading(reading_id)
+        if deleted_count == 0:
+            return jsonify({"error": "Måling ikke fundet"}), 404
+        return jsonify({"message": "Måling slettet!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- DØR 7: Slet en alert ---
+@app.route('/alerts/<alert_id>', methods=['DELETE'])
+def delete_alert(alert_id):
+    """
+    Slet en alert
+    ---
+    tags:
+      - Alerts
+    parameters:
+      - name: alert_id
+        in: path
+        type: string
+        required: true
+    responses:
+      200:
+        description: Alert slettet
+      404:
+        description: Alert ikke fundet
+    """
+    try:
+        deleted_count = repo.delete_alert(alert_id)
+        if deleted_count == 0:
+            return jsonify({"error": "Alert ikke fundet"}), 404
+        return jsonify({"message": "Alert slettet!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- DØR 8: Opdater en sensor ---
+@app.route('/sensors/<sensor_id>', methods=['PUT'])
+def update_sensor(sensor_id):
+    """
+    Opdater en sensor
+    ---
+    tags:
+      - Sensors
+    parameters:
+      - name: sensor_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+            location:
+              type: string
+            type:
+              type: string
+            status:
+              type: string
+    responses:
+      200:
+        description: Sensor opdateret
+      404:
+        description: Sensor ikke fundet
+    """
+    data = request.json
+    if not data:
+        return jsonify({"error": "Du skal sende data med for at opdatere!"}), 400
+    try:
+        modified_count = repo.update_sensor(sensor_id, data)
+        if modified_count == 0:
+            return jsonify({"error": "Sensor ikke fundet"}), 404
+        return jsonify({"message": "Sensor opdateret!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- DØR 9: Opdater en alert (Acknowledge) ---
+@app.route('/alerts/<alert_id>', methods=['PUT'])
+def update_alert(alert_id):
+    """
+    Opdater en alert (f.eks. marker som aknowledge)
+    ---
+    tags:
+      - Alerts
+    parameters:
+      - name: alert_id
+        in: path
+        type: string
+        required: true
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          properties:
+            acknowledged:
+              type: boolean
+            notificationSent:
+              type: boolean
+    responses:
+      200:
+        description: Alert opdateret
+      404:
+        description: Alert ikke fundet
+    """
+    data = request.json
+    if not data:
+        return jsonify({"error": "Du skal sende data med for at opdatere!"}), 400
+    try:
+        modified_count = repo.update_alert(alert_id, data)
+        if modified_count == 0:
+            return jsonify({"error": "Alert ikke fundet"}), 404
+        return jsonify({"message": "Alert opdateret!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     # Vi bruger 0.0.0.0 så Docker og andre computere kan tilgå appen udefra
     app.run(host='0.0.0.0', debug=True, port=5000)

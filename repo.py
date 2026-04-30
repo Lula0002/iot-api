@@ -55,6 +55,38 @@ class IoTRepository:
             alert['_id'] = str(alert['_id'])
         return alerts
 
+    def delete_alert(self, alert_id):
+        # Tilføjet for at kunne slette alarmer
+        from bson.objectid import ObjectId
+        result = self.alerts.delete_one({"_id": ObjectId(alert_id)})
+        return result.deleted_count
+
+    # --- DELETE METODER (NYT TIL OPGAVE 2) ---
+    def delete_sensor(self, sensor_id):
+        from bson.objectid import ObjectId
+        result = self.sensors.delete_one({"_id": ObjectId(sensor_id)})
+        return result.deleted_count
+
+    def delete_reading(self, reading_id):
+        from bson.objectid import ObjectId
+        result = self.readings.delete_one({"_id": ObjectId(reading_id)})
+        return result.deleted_count
+
+    def update_sensor(self, sensor_id, update_data):
+        from bson.objectid import ObjectId
+        result = self.sensors.update_one({"_id": ObjectId(sensor_id)}, {"$set": update_data})
+        return result.modified_count
+
+    def update_reading(self, reading_id, update_data):
+        from bson.objectid import ObjectId
+        result = self.readings.update_one({"_id": ObjectId(reading_id)}, {"$set": update_data})
+        return result.modified_count
+
+    def update_alert(self, alert_id, update_data):
+        from bson.objectid import ObjectId
+        result = self.alerts.update_one({"_id": ObjectId(alert_id)}, {"$set": update_data})
+        return result.modified_count
+
     # --- EMAIL NOTIFIKATION (NYT) ---
     def send_email_notification(self, alert_data):
         # Vi henter email-oplysninger fra miljøvariabler (så vi ikke hardcoder dem!)

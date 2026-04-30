@@ -215,4 +215,5 @@ def get_readings():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Vi bruger 0.0.0.0 så Docker og andre computere kan tilgå appen udefra
+    app.run(host='0.0.0.0', debug=True, port=5000)

@@ -1,5 +1,9 @@
 import os
 from pymongo import MongoClient
+from dotenv import load_dotenv
+
+# Fortæl Python at den skal kigge i .env filen og indlæse variablerne
+load_dotenv()
 
 class IoTRepository:
     def __init__(self):

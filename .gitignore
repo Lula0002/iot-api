@@ -1,0 +1,10 @@
+# Secrets: Ignorer .env filen (så dit kodeord ikke kommer på GitHub!)
+.env
+
+# Python: Ignorer virtual environment og cache
+venv/
+__pycache__/
+*.pyc
+
+# OS: Ignorer macOS systemfiler
+.DS_Store

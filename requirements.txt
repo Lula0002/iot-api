@@ -14,8 +14,8 @@ jsonschema-specifications==2025.9.1
 MarkupSafe==3.0.3
 mistune==3.2.0
 packaging==26.2
-pymango==0.1.1
 pymongo==4.17.0
+python-dotenv==1.1.0
 PyYAML==6.0.3
 referencing==0.37.0
 requests==2.33.1

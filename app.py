@@ -149,12 +149,49 @@ def create_reading():
     }
     
     try:
+        # 1. Gem målingen som normalt
         reading_id = repo.create_reading(ny_maaling)
         
-        return jsonify({
-            "message": "Måling gemt!", 
-            "reading_id": reading_id
-        }), 201
+        # 2. Tjek temperaturen (Threshold Logic)
+        # Gruppen har bestemt: > 50°C ELLER < -20°C udløser alarm!
+        alert_created = False
+        if data['unit'].lower() == "celsius" or data['unit'].lower() == "c":
+            if data['value'] > 50 or data['value'] < -20:
+                # Opret Alert objektet
+                alert_data = {
+                    "sensorId": data['sensor_id'],
+                    "readingId": reading_id,
+                    "value": data['value'],  # <-- TILFØJET: Vi skal huske at gemme værdien her!
+                    "type": "threshold_breach",
+                    "message": f"Temperatur alarm! Måling: {data['value']}°C (Grænse: >50 eller <-20)",
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "acknowledged": False,
+                    "notificationSent": False
+                }
+                
+                # Gem alarmen i MongoDB
+                alert_id = repo.create_alert(alert_data)
+                
+                # Send email notifikation
+                repo.send_email_notification(alert_data)
+                
+                alert_created = True
+                ny_maaling['alert_id'] = alert_id
+                ny_maaling['status'] = "ALARM!"
+
+        # 3. Returner svar
+        if alert_created:
+            return jsonify({
+                "message": "Måling gemt! ADVARSEL: Temperatur udenfor grænser!", 
+                "reading_id": reading_id,
+                "alert_created": True
+            }), 201
+        else:
+            return jsonify({
+                "message": "Måling gemt!", 
+                "reading_id": reading_id
+            }), 201
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
